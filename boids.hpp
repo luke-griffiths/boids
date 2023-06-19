@@ -2,13 +2,10 @@
 #define BOIDS_HPP
 
 #include <vector>
-#include <iostream>
-#include <thread>
-#include <shared_mutex>
-#include <condition_variable>
-
-
-
+//#include <iostream>
+//#include <thread>
+//#include <shared_mutex>
+//#include <condition_variable>
 class Boid {
 public:
   Boid(double x, double y, double xv, double yv);
@@ -19,6 +16,7 @@ public:
   double xvel;
   double yvel;
 };
+
 
 /*Spawns a flock of n Boids */
 std::vector<Boid*> spawn(int n);

@@ -1,5 +1,6 @@
 #include <math.h>
 #include <random>
+#include <iostream>
 
 #include "boids.hpp"
 
@@ -104,42 +105,50 @@ void update_boid(Boid& boid, std::vector<Boid>& flock) {
 
 void setAvoidFactor(double v) {
   avoid_factor = v;
+  std::cout << "avoidFactor is now " << v << std::endl;
 }
 
 
 void setVisualRange(double v) {
   visual_range = v;
   visual_range_squared = pow(visual_range, 2);
+  std::cout << "visualRange is now " << v << std::endl;
 }
 
 
 void setCenteringFactor(double v) {
   centering_factor = v;
+  std::cout << "centeringFactor is now " << v << std::endl;
 }
 
 
 void setMatchingFactor(double v) {
   matching_factor = v;
+  std::cout << "matchingFactor is now " << v << std::endl;
 }
 
 
 void setProtectedRange(double v) {
   protected_range = v;
+  std::cout << "protectedRange is now " << v << std::endl;
 }
 
 
 void setTurnFactor(double v) {
   turn_factor = v;
+  std::cout << "turnFactor is now " << v << std::endl;
 }
 
 
 void setMinSpeed(double v) {
   minspeed = v;
+  std::cout << "minSpeed is now " << v << std::endl;
 }
 
 
 void setMaxSpeed(double v) {
   maxspeed = v;
+  std::cout << "maxSpeed is now " << v << std::endl;
 }
 
 
@@ -148,6 +157,7 @@ void setBoundaries(double width, double height, double x_offset, double y_offset
   bottom = top + height;
   left = x_offset;
   right = left + width;
+  std::cout << "Box is now specified by (" << left << ", " << top << ") and (" << right << ", " << bottom << ")" << std::endl;
 }
 
 
