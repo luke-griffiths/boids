@@ -26,7 +26,7 @@ double bottom = top + 200.0;
 double left = 300.0;
 double right = left + 200.0;
 
-Boid::Boid(double x, double y, double xv, double yv) : xcoord{ x }, ycoord{ y }, xvel{ xv }, yvel{ yv } {}
+Boid::Boid(double x, double y, double xv, double yv, std::string c) : xcoord{ x }, ycoord{ y }, xvel{ xv }, yvel{ yv }, color{c} {}
 
 Boid::~Boid() {
   //std::cout << "Boid being destroyed." << std::endl;  bring this back later
@@ -41,7 +41,7 @@ std::vector<Boid*> spawn(int n) {
   std::uniform_real_distribution<double> vel_distribution(0.0, maxspeed);
 
   for (int i = 0; i < n; i++) {
-    flock.push_back(new Boid(x_distribution(generator), y_distribution(generator), vel_distribution(generator), vel_distribution(generator)));
+    flock.push_back(new Boid(x_distribution(generator), y_distribution(generator), vel_distribution(generator), vel_distribution(generator), "blue"));
   }
   return flock;
 }

@@ -1,11 +1,17 @@
 from build import pybindings as pb
 import pygame 
 from threading import Thread 
+from timeit import default_timer as timer
 
 BOID_SIZE = 6
 NUM_BOIDS = 30
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
+BOX_WIDTH = 300
+BOX_HEIGHT = 500
+FRAME_RATE = 30
+PERIOD = 1 / FRAME_RATE #seconds
+NUM_PERIODS_IN_AVG = 5
 
 
 COMMANDS = {
@@ -21,16 +27,12 @@ COMMANDS = {
 }
 
 
-
-
 def getUsrInput() -> None:
-  global running
-  while running:
+  while True:
     command = input(">>")
     parseInput(command)
   return
 
-usrInputThread = Thread(target=getUsrInput)
 
 def parseInput(s : str) -> None:
   try:
@@ -58,7 +60,7 @@ def drawBoid(x : float, y : float, color : str) -> None:
   return
 
 
-def drawArena() -> None:
+def drawBox() -> None:
   """
   Draws the region that the boids try to stay within
   """
@@ -75,14 +77,17 @@ pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 running = True
-dt = 0
 
-usrInputThread.start()
-
-pb.setBoundaries(500.0, 300.0, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+pb.setBoundaries(BOX_WIDTH, BOX_HEIGHT, SCREEN_WIDTH / 2 - BOX_WIDTH / 2, SCREEN_HEIGHT / 2 - BOX_HEIGHT / 2)
 flock = pb.spawn(NUM_BOIDS)
 
+usrInputThread = Thread(target=getUsrInput, daemon=True)
+usrInputThread.start()
+periods = [0.0 for _ in range(NUM_PERIODS_IN_AVG)]
+i = 0
+
 while running:
+    start = timer()
     # poll for events
     # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
@@ -92,7 +97,7 @@ while running:
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("white")
 
-    drawArena() # for now, later get this from the cpp file 
+    drawBox()
 
     for boid in flock:
       pb.update_boid(boid, flock)
@@ -101,12 +106,14 @@ while running:
     #updates the screen
     pygame.display.flip()
 
-    # limits FPS to 60
-    # dt is delta time in seconds since last frame, used for framerate-
-    # independent physics.
-    #this is good for now, but later I will want to print out the spare time and throw an error if the frame rate doesn't 
-    #keep up with the 30fps requirement
-    dt = clock.tick(30) / 1000
-usrInputThread.join() #there is a threading issue where it hangs when you exit the pygame. need to fix
+    periods[i] = timer() - start
+    i = (i + 1) % NUM_PERIODS_IN_AVG
+    if sum(periods) / NUM_PERIODS_IN_AVG > PERIOD:
+      msg = f'''Did not maintain {FRAME_RATE} fps. 
+      Last {NUM_PERIODS_IN_AVG} frames took {[round(period, 3) for period in periods]} seconds.
+      Should have averaged {round(PERIOD, 3)} s but instead averaged {round(sum(periods) / NUM_PERIODS_IN_AVG, 3)} s'''
+      raise RuntimeError(msg)
+    clock.tick(FRAME_RATE)
+
 pygame.quit()
 

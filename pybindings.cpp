@@ -9,11 +9,12 @@ PYBIND11_MODULE(pybindings, m) {
   m.doc() = "where does this get printed?";
 
   py::class_<Boid>(m, "Boid")
-    .def(py::init<double, double, double, double>()) //this is the constructor
+    .def(py::init<double, double, double, double, std::string>()) //this is the constructor
     .def_readwrite("x", &Boid::xcoord) //note that I'm renaming xcoord to x in python
     .def_readwrite("y", &Boid::ycoord)
     .def_readwrite("xvel", &Boid::xvel)
-    .def_readwrite("yvel", &Boid::yvel);
+    .def_readwrite("yvel", &Boid::yvel)
+    .def_readwrite("color", &Boid::color);
 
   m.def("spawn", &spawn, "Spawns a flock of boids");
 

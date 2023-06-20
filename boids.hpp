@@ -8,13 +8,14 @@
 //#include <condition_variable>
 class Boid {
 public:
-  Boid(double x, double y, double xv, double yv);
+  Boid(double x, double y, double xv, double yv, std::string c);
   ~Boid();
   //make these private later
   double xcoord;
   double ycoord;
   double xvel;
   double yvel;
+  std::string color;
 };
 
 
