@@ -3,15 +3,15 @@ import pygame
 from threading import Thread 
 from timeit import default_timer as timer
 
-BOID_SIZE = 6
-NUM_BOIDS = 30
+BOID_SIZE = 3
+NUM_BOIDS = 10 #320 is about the max single threaded cpp can support at 30fps
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 BOX_WIDTH = 300
 BOX_HEIGHT = 500
 FRAME_RATE = 30
 PERIOD = 1 / FRAME_RATE #seconds
-NUM_PERIODS_IN_AVG = 5
+NUM_PERIODS_IN_AVG = 7
 
 
 COMMANDS = {
@@ -56,7 +56,7 @@ def drawBoid(x : float, y : float, color : str) -> None:
   """
   Screen must already exist globally in order for this to not return an error
   """
-  pygame.draw.circle(screen, color, (x, y), BOID_SIZE)
+  pygame.draw.rect(screen, color, (x, y, BOID_SIZE, BOID_SIZE))
   return
 
 
@@ -99,8 +99,9 @@ while running:
 
     drawBox()
 
+    pb.update_flock(flock, 2)
     for boid in flock:
-      pb.update_boid(boid, flock)
+    #  pb.update_boid(boid, flock)
       drawBoid(boid.x, boid.y, "blue")
 
     #updates the screen
@@ -112,8 +113,13 @@ while running:
       msg = f'''Did not maintain {FRAME_RATE} fps. 
       Last {NUM_PERIODS_IN_AVG} frames took {[round(period, 3) for period in periods]} seconds.
       Should have averaged {round(PERIOD, 3)} s but instead averaged {round(sum(periods) / NUM_PERIODS_IN_AVG, 3)} s'''
-      raise RuntimeError(msg)
+      #raise RuntimeError(msg)
+      print(msg)
     clock.tick(FRAME_RATE)
 
+pb.delete_flock(flock)
 pygame.quit()
+
+
+
 

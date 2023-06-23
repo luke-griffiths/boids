@@ -2,10 +2,7 @@
 #define BOIDS_HPP
 
 #include <vector>
-//#include <iostream>
-//#include <thread>
-//#include <shared_mutex>
-//#include <condition_variable>
+
 class Boid {
 public:
   Boid(double x, double y, double xv, double yv, std::string c);
@@ -22,12 +19,17 @@ public:
 /*Spawns a flock of n Boids */
 std::vector<Boid*> spawn(int n);
 
+void delete_flock(std::vector<Boid*> flock);
+
 /* Updates the position and velocity of one Boid */
-void update_boid(Boid& boid, std::vector<Boid>& flock);
+void update_boid(Boid& boid, std::vector<Boid*>& flock);
+
+/* Updates the entire flock using multithreading */
+void update_flock(std::vector<Boid*> flock, int num_threads);
 
 //these will update the global variables
 void setAvoidFactor(double v);
-void setVisualRange(double v); //note this also updates the squared
+void setVisualRange(double v);
 void setCenteringFactor(double v);
 void setMatchingFactor(double v);
 void setProtectedRange(double v);
@@ -38,4 +40,3 @@ void setBoundaries(double width, double height, double x_offset, double y_offset
 std::vector<double> getBoundaries();
 
 #endif
-
