@@ -5,7 +5,6 @@
 
 #include "boids.hpp"
 
-
 double avoid_factor{ 0.60 };
 double visual_range{ 200.00 };
 double visual_range_squared{ visual_range * visual_range };
@@ -22,31 +21,36 @@ double left = 300.0;
 double right = left + 200.0;
 
 
-Boid::Boid(double x, double y, double xv, double yv, std::string c) : xcoord{ x }, ycoord{ y }, xvel{ xv }, yvel{ yv }, color{c} {
-  std::cout << "boid being created" << std::endl;
-}
+Boid::Boid(double x, double y, double xv, double yv, std::string c) : xcoord{ x }, ycoord{ y }, xvel{ xv }, yvel{ yv }, color{c} {}
+
 
 Boid::~Boid() {
-  std::cout << "Boid being destroyed." << std::endl;
+  //used to ensure memory management policies are followed after python takes ownership
+  //std::cout << "Boid being destroyed." << std::endl;
 }
 
-std::vector<Boid*> spawn(int n) {
+std::vector<Boid*> spawn(const int n, const int num_threads, const std::vector<std::string> colors) {
+  if(n < 1 || num_threads < 1 || n < num_threads){
+    throw std::invalid_argument("Number of threads cannot exceed number of boids");
+  }
   std::vector<Boid*> flock;
   std::default_random_engine generator;
-  std::uniform_real_distribution<double> x_distribution(0.0, 1000.0); //change this from 1000
-  std::uniform_real_distribution<double> y_distribution(0.0, 700.0); //change this from 700.0
+  std::uniform_real_distribution<double> x_distribution(0.0, 1280.0);
+  std::uniform_real_distribution<double> y_distribution(0.0, 720.0);
   std::uniform_real_distribution<double> vel_distribution(0.0, maxspeed);
-  for (int i = 0; i < n; i++) {
-    flock.push_back(new Boid(x_distribution(generator), y_distribution(generator), vel_distribution(generator), vel_distribution(generator), "blue"));
+  std::vector<std::vector<int>> partitions = partition(n, num_threads);
+  for(int p = 0; p < partitions.size(); p++){
+    std::string color = colors[p % colors.size()];
+    for(int i = partitions[p][0]; i < partitions[p][1]; i++){
+      flock.push_back(new Boid(x_distribution(generator), y_distribution(generator), vel_distribution(generator), vel_distribution(generator), color));
+    }
   }
   return flock;
 }
 
-void delete_flock(std::vector<Boid*> flock){
-  for(Boid* b : flock){
-    delete b;
-  }
-  return;
+
+void delete_flock(std::vector<Boid*>& flock){
+  for(Boid* b : flock) delete b;
 }
 
 
@@ -103,99 +107,93 @@ void update_boid(Boid& boid, std::vector<Boid*>& flock) {
   boid.ycoord += boid.yvel;
 }
 
-std::vector<std::string> colors = {"blue", "red", "green", "black", "cyan", "magenta"};
 
-void partition(std::vector<Boid*> flock, const int start_index, const int end_index, const std::string& color){
-  for(int i = start_index; i < end_index; i++){
+void update_partition(std::vector<Boid*>& flock, const int start, const int end){
+  for(int i = start; i < end; i++){
     update_boid(*flock[i], flock);
   }
-  return;
 }
 
-void update_flock(std::vector<Boid*> flock, int num_threads){
-  int partition_size = flock.size() / num_threads;
-  //create a threadpool of num_threads
-  //for(int t = 0; t < 1; t++){
-    //std::thread worker(partition, flock, t * partition_size, t * partition_size + partition_size,  colors[num_threads % colors.size()]);
-    std::thread worker(partition, std::ref(flock), 0, flock.size(),  colors[num_threads % colors.size()]);
 
+void update_flock(std::vector<Boid*>& flock, const int num_threads){
+  std::vector<std::vector<int>> partitions = partition(flock.size(), num_threads);
+  for(int t = 0; t < num_threads; t++){
+    //flock is passed by reference, so must be wrapped with std::ref to be passed to a thread
+    std::thread worker(update_partition, std::ref(flock), partitions[t][0], partitions[t][1]);
     worker.join();
-  //}
-  return;
+  }
 }
 
 
+std::vector<std::vector<int>> partition(const int num_elements, const int num_partitions){
+  int partition_size{num_elements / num_partitions};
+  int leftover{num_elements - partition_size * num_partitions};
+  int start{0};
+  int end{partition_size};
+  std::vector<std::vector<int>> partition_indices;
+  while(end <= num_elements){
+    partition_indices.push_back({start, end});
+    if(leftover){
+      partition_indices.back()[1]++;
+      leftover--;
+    } 
+    start = partition_indices.back()[1];
+    end = start + partition_size;
+  }
+  return partition_indices;
+}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void setAvoidFactor(double v) {
+void setAvoidFactor(const double v) {
   avoid_factor = v;
   std::cout << "avoidFactor is now " << v << std::endl;
 }
 
 
-void setVisualRange(double v) {
+void setVisualRange(const double v) {
   visual_range = v;
   visual_range_squared = pow(visual_range, 2);
   std::cout << "visualRange is now " << v << std::endl;
 }
 
 
-void setCenteringFactor(double v) {
+void setCenteringFactor(const double v) {
   centering_factor = v;
   std::cout << "centeringFactor is now " << v << std::endl;
 }
 
 
-void setMatchingFactor(double v) {
+void setMatchingFactor(const double v) {
   matching_factor = v;
   std::cout << "matchingFactor is now " << v << std::endl;
 }
 
 
-void setProtectedRange(double v) {
+void setProtectedRange(const double v) {
   protected_range = v;
   std::cout << "protectedRange is now " << v << std::endl;
 }
 
 
-void setTurnFactor(double v) {
+void setTurnFactor(const double v) {
   turn_factor = v;
   std::cout << "turnFactor is now " << v << std::endl;
 }
 
 
-void setMinSpeed(double v) {
+void setMinSpeed(const double v) {
   minspeed = v;
   std::cout << "minSpeed is now " << v << std::endl;
 }
 
 
-void setMaxSpeed(double v) {
+void setMaxSpeed(const double v) {
   maxspeed = v;
   std::cout << "maxSpeed is now " << v << std::endl;
 }
 
 
-void setBoundaries(double width, double height, double x_offset, double y_offset){
+void setBoundaries(const double width, const double height, const double x_offset, const double y_offset){
   top = y_offset;
   bottom = top + height;
   left = x_offset;

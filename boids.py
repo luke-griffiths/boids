@@ -1,18 +1,20 @@
-from build import pybindings as pb
 import pygame 
 from threading import Thread 
 from timeit import default_timer as timer
 
+from build import pybindings as pb
+
 BOID_SIZE = 3
-NUM_BOIDS = 10 #320 is about the max single threaded cpp can support at 30fps
+NUM_BOIDS = 1500 #~320 is about the max single threaded cpp can support at 30fps
+NUM_THREADS = 8
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
 BOX_WIDTH = 300
 BOX_HEIGHT = 500
 FRAME_RATE = 30
 PERIOD = 1 / FRAME_RATE #seconds
-NUM_PERIODS_IN_AVG = 7
 
+COLORS = ["blue", "red", "green"]
 
 COMMANDS = {
   "setboundaries" : pb.setBoundaries,
@@ -27,6 +29,7 @@ COMMANDS = {
 }
 
 
+### HELPER METHODS
 def getUsrInput() -> None:
   while True:
     command = input(">>")
@@ -35,6 +38,11 @@ def getUsrInput() -> None:
 
 
 def parseInput(s : str) -> None:
+  """
+  Allows user to access C++ attributes controlling the boids behavior
+
+  Input must be a valid command, and must contain the appropriate number of args
+  """
   try:
     #Preprocess the string
     s = s.lower()
@@ -42,27 +50,21 @@ def parseInput(s : str) -> None:
     cmd = args[0]
     args = [float(arg) for arg in args[1:]]
     COMMANDS[cmd](*args)
-  except KeyError as err:
-    print(f"KeyError: The entered command is not recognized. {err}")
-  except IndexError as err:
-    print(f"IndexError: You must input a function with a valid number of args: {err}")
-  except ValueError as err:
-    print(f"Invalid argument type: {err}")
+  except (KeyError, IndexError, ValueError) as err:
+    print((f"KeyError: The entered command is not recognized or has the wrong number of arguments. {err}. \n"
+    f"Valid commands: \n"
+    f"{[key for key in COMMANDS]}"))
   return
 
-  
 
-def drawBoid(x : float, y : float, color : str) -> None:
-  """
-  Screen must already exist globally in order for this to not return an error
-  """
+def drawBoid(screen : int, x : float, y : float, color : str) -> None:
   pygame.draw.rect(screen, color, (x, y, BOID_SIZE, BOID_SIZE))
   return
 
 
-def drawBox() -> None:
+def drawBox(screen : int) -> None:
   """
-  Draws the region that the boids try to stay within
+  Draws the region the boids stay within
   """
   bounds = pb.getBoundaries()
   pygame.draw.line(screen, "red", (bounds[2], bounds[0]), (bounds[3], bounds[0])) #Top line
@@ -72,54 +74,42 @@ def drawBox() -> None:
   return
 
 
-# pygame setup
+### END HELPER METHODS
+
+#pygame setup
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 running = True
-
+#setup the flock of boids
 pb.setBoundaries(BOX_WIDTH, BOX_HEIGHT, SCREEN_WIDTH / 2 - BOX_WIDTH / 2, SCREEN_HEIGHT / 2 - BOX_HEIGHT / 2)
-flock = pb.spawn(NUM_BOIDS)
-
+flock = pb.spawn(NUM_BOIDS, NUM_THREADS, COLORS)
+#run a thread to take input from the terminal. Will be abruptly killed when the pygame window is closed
 usrInputThread = Thread(target=getUsrInput, daemon=True)
 usrInputThread.start()
-periods = [0.0 for _ in range(NUM_PERIODS_IN_AVG)]
-i = 0
 
 while running:
     start = timer()
-    # poll for events
-    # pygame.QUIT event means the user clicked X to close your window
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
-            running = False
-            
-    # fill the screen with a color to wipe away anything from last frame
+            running = False    
+    #reset the screen
     screen.fill("white")
+    drawBox(screen)
+    #call multithreaded update algorithm
+    pb.update_flock(flock, NUM_THREADS)
 
-    drawBox()
-
-    pb.update_flock(flock, 2)
     for boid in flock:
-    #  pb.update_boid(boid, flock)
-      drawBoid(boid.x, boid.y, "blue")
+      drawBoid(screen, boid.x, boid.y, boid.color)
 
     #updates the screen
     pygame.display.flip()
 
-    periods[i] = timer() - start
-    i = (i + 1) % NUM_PERIODS_IN_AVG
-    if sum(periods) / NUM_PERIODS_IN_AVG > PERIOD:
-      msg = f'''Did not maintain {FRAME_RATE} fps. 
-      Last {NUM_PERIODS_IN_AVG} frames took {[round(period, 3) for period in periods]} seconds.
-      Should have averaged {round(PERIOD, 3)} s but instead averaged {round(sum(periods) / NUM_PERIODS_IN_AVG, 3)} s'''
-      #raise RuntimeError(msg)
-      print(msg)
+    frame_time = timer() - start
+    if frame_time > PERIOD:
+      #raise RuntimeError(..)
+      print(f"Did not maintain {FRAME_RATE} fps. Frame took {round(frame_time, 4)} seconds but should have taken <{round(PERIOD, 4)}")
     clock.tick(FRAME_RATE)
-
+#clean up C++ dynamically allocated memory
 pb.delete_flock(flock)
 pygame.quit()
-
-
-
-
