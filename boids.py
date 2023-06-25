@@ -62,7 +62,7 @@ def drawBoid(screen : int, x : float, y : float, color : str) -> None:
   return
 
 
-def drawBox(screen : int) -> None:
+def drawBox(screen) -> None:
   """
   Draws the region the boids stay within
   """

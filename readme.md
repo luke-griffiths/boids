@@ -9,6 +9,7 @@ cd build
 cmake ..
 make
 ```
+Add a blank ```__init__.py``` file to the build folder.
 Now return to the boids directory and run boids.py
 
 ## Results
